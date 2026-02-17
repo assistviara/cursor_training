@@ -68,6 +68,7 @@ class HyakuninApp(tk.Tk):
         self.current_year = None
         self.current_month = None
         self._set_today()
+        self._apply_theme()
 
         self._build_ui()
 
@@ -77,50 +78,130 @@ class HyakuninApp(tk.Tk):
         self.current_year = t.year
         self.current_month = t.month
 
-    def _build_ui(self):
-        # ヘッダー
-        head = ttk.Frame(self, padding=(12, 10))
-        head.pack(fill=tk.X)
-        ttk.Label(head, text="百人一首 記録", font=("", 14, "bold")).pack(anchor=tk.W)
-        ttk.Label(head, text="読んだ日にチェック → 10首ごとにご褒美", foreground="gray").pack(anchor=tk.W)
+    def _apply_theme(self):
+        # ダーク + ネオン（ゲームっぽい雰囲気）
+        self.PAL = {
+            "bg": "#0B1020",  # 濃紺
+            "panel": "#121A33",  # パネル背景
+            "text": "#E5E7EB",
+            "muted": "#93A4B8",
+            "accent": "#22D3EE",  # ネオンシアン
+            "good": "#34D399",  # クリア
+            "danger": "#FB7185",  # 日曜/注意
+            "tile": "#18224A",
+            "tile_hover": "#223066",
+        }
 
-        # 読んだ日数
-        stat_f = ttk.Frame(self, padding=(12, 4))
-        stat_f.pack(fill=tk.X)
-        ttk.Label(stat_f, text="読んだ日（首）：").pack(side=tk.LEFT)
+        self.configure(bg=self.PAL["bg"])
+
+        style = ttk.Style(self)
+        style.theme_use("clam")
+        style.configure(".", font=("Segoe UI", 10))
+
+        style.configure("TFrame", background=self.PAL["bg"])
+        style.configure("Panel.TFrame", background=self.PAL["panel"])
+
+        style.configure("TLabel", background=self.PAL["panel"], foreground=self.PAL["text"])
+        style.configure("Title.TLabel", font=("Segoe UI", 18, "bold"), foreground=self.PAL["accent"])
+        style.configure("Sub.TLabel", foreground=self.PAL["muted"])
+        style.configure("Stat.TLabel", font=("Consolas", 11, "bold"), foreground=self.PAL["accent"])
+
+        # ナビ用ボタン（前月/次月）
+        style.configure(
+            "Nav.TButton",
+            padding=(10, 6),
+            background=self.PAL["panel"],
+            foreground=self.PAL["text"],
+            borderwidth=0,
+        )
+        style.map(
+            "Nav.TButton",
+            foreground=[("active", self.PAL["accent"])],
+        )
+
+        # ご褒美エリアの枠
+        style.configure("Panel.TLabelframe", background=self.PAL["panel"], foreground=self.PAL["text"])
+        style.configure(
+            "Panel.TLabelframe.Label",
+            background=self.PAL["bg"],
+            foreground=self.PAL["accent"],
+            font=("Segoe UI", 10, "bold"),
+        )
+
+    def _build_ui(self):
+        # ヘッダー（ゲーム風）
+        head = ttk.Frame(self, style="Panel.TFrame", padding=(14, 12))
+        head.pack(fill=tk.X, padx=12, pady=(12, 6))
+        ttk.Label(head, text="HYAKUNIN RUN", style="Title.TLabel").pack(anchor=tk.W)
+        ttk.Label(
+            head,
+            text="CHECK DAYS → EVERY 10 CLEAR = REWARD UNLOCK",
+            style="Sub.TLabel",
+        ).pack(anchor=tk.W)
+
+        # HUD（TOTAL / RANK / 次の+10ゲージ）
+        hud = ttk.Frame(self, style="Panel.TFrame", padding=(14, 10))
+        hud.pack(fill=tk.X, padx=12, pady=(0, 8))
+
+        ttk.Label(hud, text="TOTAL:", style="Sub.TLabel").pack(side=tk.LEFT)
         self.total_var = tk.StringVar(value="0")
-        self.total_label = ttk.Label(stat_f, textvariable=self.total_var, font=("", 12, "bold"))
-        self.total_label.pack(side=tk.LEFT, padx=(4, 0))
+        ttk.Label(hud, textvariable=self.total_var, style="Stat.TLabel").pack(side=tk.LEFT, padx=(6, 16))
+
+        self.rank_var = tk.StringVar(value="RANK: E")
+        ttk.Label(hud, textvariable=self.rank_var, style="Sub.TLabel").pack(side=tk.LEFT)
+
+        self.gauge = ttk.Progressbar(hud, length=170, mode="determinate", maximum=10)
+        self.gauge.pack(side=tk.RIGHT)
+        self.gauge_label_var = tk.StringVar(value="NEXT +10")
+        ttk.Label(hud, textvariable=self.gauge_label_var, style="Sub.TLabel").pack(side=tk.RIGHT, padx=(0, 10))
+
         self._update_total()
 
         # カレンダー見出し（年月・前後）
-        cal_header = ttk.Frame(self, padding=(12, 8))
-        cal_header.pack(fill=tk.X)
-        self.prev_btn = ttk.Button(cal_header, text=" ‹ 前月 ", width=8, command=self._prev_month)
+        cal_header = ttk.Frame(self, style="Panel.TFrame", padding=(12, 10))
+        cal_header.pack(fill=tk.X, padx=12, pady=(0, 6))
+        self.prev_btn = ttk.Button(cal_header, text=" ‹ 前月 ", width=8, command=self._prev_month, style="Nav.TButton")
         self.prev_btn.pack(side=tk.LEFT)
         self.month_var = tk.StringVar()
-        ttk.Label(cal_header, textvariable=self.month_var, font=("", 11, "bold")).pack(side=tk.LEFT, expand=True)
-        self.next_btn = ttk.Button(cal_header, text=" 次月 › ", width=8, command=self._next_month)
+        ttk.Label(cal_header, textvariable=self.month_var, style="Stat.TLabel").pack(side=tk.LEFT, expand=True)
+        self.next_btn = ttk.Button(cal_header, text=" 次月 › ", width=8, command=self._next_month, style="Nav.TButton")
         self.next_btn.pack(side=tk.RIGHT)
 
         # 曜日ラベル
-        week_f = ttk.Frame(self, padding=(12, 0))
-        week_f.pack(fill=tk.X)
-        for w in ("日", "月", "火", "水", "木", "金", "土"):
-            lb = ttk.Label(week_f, text=w, width=4, anchor=tk.CENTER)
+        week_f = ttk.Frame(self, style="Panel.TFrame", padding=(12, 6))
+        week_f.pack(fill=tk.X, padx=12, pady=(0, 2))
+        for i, w in enumerate(("日", "月", "火", "水", "木", "金", "土")):
+            fg = self.PAL["text"]
+            if i == 0:
+                fg = self.PAL["danger"]
+            elif i == 6:
+                fg = self.PAL["accent"]
+            lb = ttk.Label(week_f, text=w, width=4, anchor=tk.CENTER, foreground=fg)
             lb.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
         # 日付グリッド（Frame + 後でボタン生成）
-        self.cal_frame = ttk.Frame(self, padding=(12, 4))
-        self.cal_frame.pack(fill=tk.BOTH, expand=True)
+        self.cal_frame = ttk.Frame(self, style="Panel.TFrame", padding=(12, 10))
+        self.cal_frame.pack(fill=tk.BOTH, expand=True, padx=12, pady=(0, 8))
 
         # ご褒美エリア
-        reward_f = ttk.LabelFrame(self, text="ご褒美リスト", padding=(10, 8))
-        reward_f.pack(fill=tk.BOTH, expand=True, padx=12, pady=8)
-        self.reward_text = tk.Text(reward_f, height=12, wrap=tk.WORD, state=tk.DISABLED, font=("", 10))
+        reward_f = ttk.LabelFrame(self, text="REWARD LIST", padding=(10, 8), style="Panel.TLabelframe")
+        reward_f.pack(fill=tk.BOTH, expand=True, padx=12, pady=(0, 12))
+        self.reward_text = tk.Text(
+            reward_f,
+            height=12,
+            wrap=tk.WORD,
+            state=tk.DISABLED,
+            font=("Consolas", 10),
+            bg=self.PAL["panel"],
+            fg=self.PAL["text"],
+            insertbackground=self.PAL["accent"],
+            relief=tk.FLAT,
+            bd=0,
+            highlightthickness=0,
+        )
         self.reward_text.pack(fill=tk.BOTH, expand=True)
         self.next_milestone_var = tk.StringVar()
-        ttk.Label(reward_f, textvariable=self.next_milestone_var, foreground="gray").pack(anchor=tk.W)
+        ttk.Label(reward_f, textvariable=self.next_milestone_var, style="Sub.TLabel").pack(anchor=tk.W)
 
         self._refresh_calendar()
         self._refresh_rewards()
@@ -128,6 +209,18 @@ class HyakuninApp(tk.Tk):
     def _update_total(self):
         total = sum(self.records.values())
         self.total_var.set(str(total))
+
+        # 10首ごとの進捗（ゲージ）
+        cur = total % 10
+        if hasattr(self, "gauge"):
+            self.gauge["value"] = cur
+            self.gauge_label_var.set(f"NEXT {((total // 10) + 1) * 10} ( +{10 - cur} )")
+
+        # ランク（例：10首ごとに昇格）
+        ranks = ["E", "D", "C", "B", "A", "S", "SS", "SSS"]
+        rank = ranks[min(total // 10, len(ranks) - 1)]
+        if hasattr(self, "rank_var"):
+            self.rank_var.set(f"RANK: {rank}")
 
     def _date_key(self, year, month, day):
         return f"{year}-{month:02d}-{day:02d}"
@@ -169,10 +262,10 @@ class HyakuninApp(tk.Tk):
         today = date.today()
 
         for week in weeks:
-            row = ttk.Frame(self.cal_frame)
+            row = ttk.Frame(self.cal_frame, style="Panel.TFrame")
             row.pack(fill=tk.X, pady=2)
             for day, _weekday in week:
-                cell = ttk.Frame(row)
+                cell = ttk.Frame(row, style="Panel.TFrame")
                 cell.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=1)
                 if day == 0:
                     ttk.Label(cell, text="").pack(fill=tk.BOTH, expand=True)
@@ -184,22 +277,36 @@ class HyakuninApp(tk.Tk):
                     and today.month == self.current_month
                     and today.day == day
                 )
+                tag = "CLEAR" if is_read else ""
+                today_tag = "TODAY" if is_today else ""
+                sub = today_tag or tag
+                text = f"{day}\n{sub}" if sub else str(day)
                 btn = tk.Button(
                     cell,
-                    text=str(day),
+                    text=text,
                     command=lambda k=date_key: self._on_day_click(k),
-                    relief=tk.RAISED,
-                    bd=1,
+                    relief=tk.FLAT,
+                    bd=0,
                     cursor="hand2",
-                    font=("", 10),
+                    font=("Consolas", 10, "bold" if is_today else "normal"),
+                    justify="center",
+                    fg=self.PAL["text"],
+                    bg=self.PAL["tile"],
+                    activeforeground=self.PAL["accent"],
+                    activebackground=self.PAL["tile_hover"],
+                    highlightthickness=0,
                 )
+                # 曜日色（0=日, 6=土）
+                if _weekday == 0:
+                    btn.configure(fg=self.PAL["danger"])
+                elif _weekday == 6:
+                    btn.configure(fg=self.PAL["accent"])
+
+                # CLEAR は緑で強調
                 if is_read:
-                    btn.configure(bg="#c8e6c9", activebackground="#a5d6a7")  # 読んだ
-                else:
-                    btn.configure(bg="#f5f5f5", activebackground="#eeeeee")
-                if is_today:
-                    btn.configure(relief=tk.SOLID, bd=2, highlightbackground="#8b4512")
-                btn.pack(fill=tk.BOTH, expand=True)
+                    btn.configure(fg=self.PAL["good"])
+
+                btn.pack(fill=tk.BOTH, expand=True, ipady=8)
 
     def _refresh_rewards(self):
         total = sum(self.records.values())
