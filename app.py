@@ -132,27 +132,27 @@ class HyakuninApp(tk.Tk):
         # ヘッダー（ゲーム風）
         head = ttk.Frame(self, style="Panel.TFrame", padding=(14, 12))
         head.pack(fill=tk.X, padx=12, pady=(12, 6))
-        ttk.Label(head, text="HYAKUNIN RUN", style="Title.TLabel").pack(anchor=tk.W)
+        ttk.Label(head, text="百人一首", style="Title.TLabel").pack(anchor=tk.W)
         ttk.Label(
             head,
-            text="CHECK DAYS → EVERY 10 CLEAR = REWARD UNLOCK",
+            text="読んだ日にチェック → 10首クリアごとにご褒美解放",
             style="Sub.TLabel",
         ).pack(anchor=tk.W)
 
-        # HUD（TOTAL / RANK / 次の+10ゲージ）
+        # HUD（読んだ首数 / ランク / 次のご褒美ゲージ）
         hud = ttk.Frame(self, style="Panel.TFrame", padding=(14, 10))
         hud.pack(fill=tk.X, padx=12, pady=(0, 8))
 
-        ttk.Label(hud, text="TOTAL:", style="Sub.TLabel").pack(side=tk.LEFT)
+        ttk.Label(hud, text="読んだ首数:", style="Sub.TLabel").pack(side=tk.LEFT)
         self.total_var = tk.StringVar(value="0")
         ttk.Label(hud, textvariable=self.total_var, style="Stat.TLabel").pack(side=tk.LEFT, padx=(6, 16))
 
-        self.rank_var = tk.StringVar(value="RANK: E")
+        self.rank_var = tk.StringVar(value="ランク: E")
         ttk.Label(hud, textvariable=self.rank_var, style="Sub.TLabel").pack(side=tk.LEFT)
 
         self.gauge = ttk.Progressbar(hud, length=170, mode="determinate", maximum=10)
         self.gauge.pack(side=tk.RIGHT)
-        self.gauge_label_var = tk.StringVar(value="NEXT +10")
+        self.gauge_label_var = tk.StringVar(value="次のご褒美")
         ttk.Label(hud, textvariable=self.gauge_label_var, style="Sub.TLabel").pack(side=tk.RIGHT, padx=(0, 10))
 
         self._update_total()
@@ -184,7 +184,7 @@ class HyakuninApp(tk.Tk):
         self.cal_frame.pack(fill=tk.BOTH, expand=True, padx=12, pady=(0, 8))
 
         # ご褒美エリア
-        reward_f = ttk.LabelFrame(self, text="REWARD LIST", padding=(10, 8), style="Panel.TLabelframe")
+        reward_f = ttk.LabelFrame(self, text="ご褒美リスト", padding=(10, 8), style="Panel.TLabelframe")
         reward_f.pack(fill=tk.BOTH, expand=True, padx=12, pady=(0, 12))
         self.reward_text = tk.Text(
             reward_f,
@@ -214,13 +214,13 @@ class HyakuninApp(tk.Tk):
         cur = total % 10
         if hasattr(self, "gauge"):
             self.gauge["value"] = cur
-            self.gauge_label_var.set(f"NEXT {((total // 10) + 1) * 10} ( +{10 - cur} )")
+            self.gauge_label_var.set(f"次のご褒美: {((total // 10) + 1) * 10}（あと {10 - cur}）")
 
         # ランク（例：10首ごとに昇格）
         ranks = ["E", "D", "C", "B", "A", "S", "SS", "SSS"]
         rank = ranks[min(total // 10, len(ranks) - 1)]
         if hasattr(self, "rank_var"):
-            self.rank_var.set(f"RANK: {rank}")
+            self.rank_var.set(f"ランク: {rank}")
 
     def _date_key(self, year, month, day):
         return f"{year}-{month:02d}-{day:02d}"
@@ -277,8 +277,8 @@ class HyakuninApp(tk.Tk):
                     and today.month == self.current_month
                     and today.day == day
                 )
-                tag = "CLEAR" if is_read else ""
-                today_tag = "TODAY" if is_today else ""
+                tag = "クリア" if is_read else ""
+                today_tag = "今日" if is_today else ""
                 sub = today_tag or tag
                 text = f"{day}\n{sub}" if sub else str(day)
                 btn = tk.Button(
@@ -302,7 +302,7 @@ class HyakuninApp(tk.Tk):
                 elif _weekday == 6:
                     btn.configure(fg=self.PAL["accent"])
 
-                # CLEAR は緑で強調
+                # クリアは緑で強調
                 if is_read:
                     btn.configure(fg=self.PAL["good"])
 
